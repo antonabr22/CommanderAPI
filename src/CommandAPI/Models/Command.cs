@@ -10,7 +10,7 @@ namespace CommandAPI.Models
         [MaxLength(250)]
         public string HowTo { get; set; }
         [Required]
-        public string Line { get; set; }
+        public string CommandLine { get; set; }
         [Required]
         public string Platform { get; set; }
     }
