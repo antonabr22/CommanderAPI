@@ -14,6 +14,9 @@ using Npgsql;
 using AutoMapper;
 using Newtonsoft.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.OpenApi.Models;
+using System.Reflection;
+using System.IO;
 
 namespace CommandAPI
 {
@@ -32,7 +35,7 @@ namespace CommandAPI
         public void ConfigureServices(IServiceCollection services)
         {
             var builder = new NpgsqlConnectionStringBuilder();
-            builder.ConnectionString = 
+            builder.ConnectionString =
                 Configuration.GetConnectionString("PostgreSqlConnection");
             builder.Username = Configuration["UserID"];
             builder.Password = Configuration["Password"];
@@ -46,27 +49,45 @@ namespace CommandAPI
                     opt.Authority = $"{Configuration["Instance"]}{Configuration["TenantId"]}";
                 });
 
-            services.AddControllers().AddNewtonsoftJson(s => 
+            services.AddControllers().AddNewtonsoftJson(s =>
                 s.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver()
             );
-            
+
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
             services.AddScoped<ICommandAPIRepo, SqlCommandAPIRepo>();
 
-            services.AddSwaggerGen();
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Version = "v1",
+                    Title = "Command API",
+                    Description = "ASP.NET Core Web API для доступа к базе CLI команд",
+                    Contact = new OpenApiContact
+                    {
+                        Name = "Антон Абрамов",
+                        Email = "antonabramow22@gmail.com"
+                    }
+                });
+
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                c.IncludeXmlComments(xmlPath);
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, CommandContext context)
         {
             context.Database.Migrate();
-            
+
             app.UseSwagger();
             app.UseSwagger();
-            app.UseSwaggerUI(c =>  {
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "CommandAPI v1");
                 c.RoutePrefix = string.Empty;
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Commander v1");
             });
 
             if (env.IsDevelopment())
